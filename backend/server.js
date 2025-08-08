@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require("path");
+
+
 
 // Load environment variables
 dotenv.config();
@@ -12,6 +15,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "../frontend/build")));
+
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/iit_student_management', {
@@ -35,6 +40,10 @@ app.use('/api/locations', require('./routes/locations'));
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
+});
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
 });
 
 // 404 handler
