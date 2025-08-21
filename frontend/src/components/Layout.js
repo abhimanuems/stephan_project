@@ -39,7 +39,9 @@ const Layout = () => {
     ...(isSuperAdmin ? [
       { name: 'Employees', href: '/employees', icon: Users },
       { name: 'Leave Management', href: '/leave-management', icon: FileText },
-      { name: 'Location Management', href: '/locations', icon: MapPin }
+      { name: 'Location Management', href: '/locations', icon: MapPin },
+      { name: 'Courses', href: '/courses', icon: GraduationCap },
+      { name: 'Course Students', href: '/course-students', icon: Users }
     ] : []),
   ];
 

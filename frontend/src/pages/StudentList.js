@@ -129,19 +129,22 @@ const StudentList = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Student
+                  Student Details
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registration
+                  Registration Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
+                  Course & Venue
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fee Status
+                  Parent Details
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registered By
+                  Payment Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Balance Amount
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -149,75 +152,123 @@ const StudentList = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {students.map((student) => (
-                <tr key={student._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {student.name}
+              {students.map((student) => {
+                // Calculate total balance across all courses
+                const totalBalance = student.selectedCourses ? 
+                  student.selectedCourses.reduce((total, course) => {
+                    const courseBalance = (course.totalAmount || 0) - (course.amountPaid || 0);
+                    return total + courseBalance;
+                  }, 0) : 0;
+
+                return (
+                  <tr key={student._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {student.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Age: {student.age} | {student.religion}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Age: {student.age} | {student.religion}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {student.registrationNumber}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {formatDate(student.registrationDate)}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {student.registrationNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {student.campVenue}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {student.selectedCourses && student.selectedCourses.length > 0 
+                            ? student.selectedCourses.map(course => course.courseId?.name || course.courseName || 'Unknown Course').join(', ')
+                            : 'No courses selected'
+                          }
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Mode: {student.courseMode || 'Offline'}
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {formatDate(student.registrationDate)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {student.parentName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {student.parentMobileNumber}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm text-gray-900">
-                        {student.contactNumber}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {student.address}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      student.feePaid 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {student.feePaid ? 'Paid' : 'Pending'}
-                    </span>
-                    {student.courseFee > 0 && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        ₹{student.courseFee.toLocaleString()}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {student.registeredBy?.name || 'Unknown'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        to={`/students/${student._id}/edit`}
-                        className="text-primary-600 hover:text-primary-900"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Link>
-                      {isSuperAdmin && (
-                        <button
-                          onClick={() => confirmDelete(student)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        totalBalance === 0 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {totalBalance === 0 ? 'Paid' : 'Pending'}
+                      </span>
+                      {student.selectedCourses && student.selectedCourses.length > 0 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {student.selectedCourses.map((course, index) => (
+                            <div key={course.courseId || index}>
+                              {course.courseId?.name || course.courseName}: ₹{course.amountPaid || 0}/{course.totalAmount || 0}
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm">
+                        {totalBalance > 0 ? (
+                          <span className="text-red-600 font-medium">
+                            ₹{totalBalance.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-green-600 font-medium">
+                            ₹0
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/students/${student._id}`}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                        <Link
+                          to={`/students/${student._id}/edit`}
+                          className="text-primary-600 hover:text-primary-900"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => confirmDelete(student)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

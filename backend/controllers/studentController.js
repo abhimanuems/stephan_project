@@ -24,6 +24,7 @@ const getAllStudents = async (req, res) => {
 
     const students = await Student.find(query)
       .populate('registeredBy', 'name email')
+      .populate('selectedCourses.courseId', 'name courseFee duration')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -50,7 +51,8 @@ const getAllStudents = async (req, res) => {
 const getStudentById = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id)
-      .populate('registeredBy', 'name email');
+      .populate('registeredBy', 'name email')
+      .populate('selectedCourses.courseId', 'name courseFee duration');
 
     if (!student) {
       return res.status(404).json({ message: 'Student not found' });
@@ -68,7 +70,11 @@ const createStudent = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.error('Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const studentData = {
@@ -76,11 +82,38 @@ const createStudent = async (req, res) => {
       registeredBy: req.user._id
     };
 
+    // Validate payment requirements for new registrations
+    if (studentData.selectedCourses && studentData.selectedCourses.length > 0) {
+      const invalidPayments = studentData.selectedCourses.filter(course => {
+        if (course.paymentMode === 'Partial') {
+          // For partial payment, check if partial amount is provided
+          return !course.partialPaymentAmount || course.partialPaymentAmount <= 0;
+        } else if (course.paymentMode === 'Full') {
+          // For full payment, no validation needed - assume full amount is paid
+          return false;
+        }
+        return false;
+      });
+
+      if (invalidPayments.length > 0) {
+        const courseNames = invalidPayments.map(c => c.courseName || 'Unknown Course').join(', ');
+        return res.status(400).json({ 
+          message: `Payment validation failed for: ${courseNames}`,
+          details: 'Please ensure partial payment amount is provided for partial payment mode'
+        });
+      }
+    }
+
+    console.log('Creating student with data:', studentData);
+
     const student = new Student(studentData);
     await student.save();
 
     const populatedStudent = await Student.findById(student._id)
-      .populate('registeredBy', 'name email');
+      .populate('registeredBy', 'name email')
+      .populate('selectedCourses.courseId', 'name courseFee duration');
+
+    console.log('Student created successfully:', populatedStudent);
 
     res.status(201).json({
       message: 'Student registered successfully',
@@ -91,7 +124,17 @@ const createStudent = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Registration number or admission number already exists' });
     }
-    res.status(500).json({ message: 'Server error' });
+    
+    // Provide more specific error messages
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: validationErrors 
+      });
+    }
+    
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -100,7 +143,11 @@ const updateStudent = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.error('Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const student = await Student.findById(req.params.id);
@@ -113,11 +160,38 @@ const updateStudent = async (req, res) => {
       return res.status(403).json({ message: 'Access denied' });
     }
 
+    // Validate payment requirements if courses are being updated
+    if (req.body.selectedCourses && req.body.selectedCourses.length > 0) {
+      const invalidPayments = req.body.selectedCourses.filter(course => {
+        if (course.paymentMode === 'Partial') {
+          // For partial payment, check if partial amount is provided
+          return !course.partialPaymentAmount || course.partialPaymentAmount <= 0;
+        } else if (course.paymentMode === 'Full') {
+          // For full payment, no validation needed - assume full amount is paid
+          return false;
+        }
+        return false;
+      });
+
+      if (invalidPayments.length > 0) {
+        const courseNames = invalidPayments.map(c => c.courseName || 'Unknown Course').join(', ');
+        return res.status(400).json({ 
+          message: `Payment validation failed for: ${courseNames}`,
+          details: 'Please ensure partial payment amount is provided for partial payment mode'
+        });
+      }
+    }
+
+    console.log('Updating student with data:', req.body);
+
     const updatedStudent = await Student.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    ).populate('registeredBy', 'name email');
+    ).populate('registeredBy', 'name email')
+     .populate('selectedCourses.courseId', 'name courseFee duration');
+
+    console.log('Student updated successfully:', updatedStudent);
 
     res.json({
       message: 'Student updated successfully',
@@ -128,7 +202,17 @@ const updateStudent = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({ message: 'Registration number or admission number already exists' });
     }
-    res.status(500).json({ message: 'Server error' });
+    
+    // Provide more specific error messages
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: validationErrors 
+      });
+    }
+    
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
