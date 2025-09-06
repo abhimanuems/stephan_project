@@ -116,7 +116,7 @@ const Login = () => {
               )}
             </button>
           </div>
-
+{/* 
           <div className="text-center">
             <p className="text-xs text-gray-500">
               Demo Credentials:
@@ -124,7 +124,7 @@ const Login = () => {
             <p className="text-xs text-gray-400">
               Email: superadmin@iit.com | Password: superadmin123
             </p>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>
